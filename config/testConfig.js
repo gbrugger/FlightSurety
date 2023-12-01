@@ -20,11 +20,8 @@ const Config = async function (accounts) {
   const owner = accounts[0];
   const firstAirline = accounts[1];
 
-  const flightSuretyData = await FlightSuretyData.new();
-  const flightSuretyApp = await FlightSuretyApp.new(
-    flightSuretyData.address,
-    firstAirline
-  );
+  const flightSuretyData = await FlightSuretyData.new(firstAirline);
+  const flightSuretyApp = await FlightSuretyApp.new(flightSuretyData.address);
 
   return {
     owner: owner,

@@ -35,9 +35,10 @@ contract FlightSuretyApp {
     mapping(bytes32 => Flight) private flights;
     FlightSuretyData flightSuretyData;
 
-    mapping(uint256 => mapping(address => bool)) private approvedBy;
+    // Voted airline => voter airlines
+    mapping(address => address[]) private approvedBy;
     uint8 private approvedCount = 0;
-    uint8 constant approvedM = 3;
+    uint8 constant APPROVED_M_RATIO = 2;
     uint256 private currentApprovalIndex = 0;
 
     uint32 private constant MIN_FUNDING = 10;
@@ -69,27 +70,11 @@ contract FlightSuretyApp {
     }
 
     modifier requireIsAirlineAllowed() {
-        (bool isRegistered, uint256 funding) = flightSuretyData.getAirline(
-            msg.sender
-        );
+        (bool isRegistered, uint256 funding, uint256 votes) = flightSuretyData
+            .getAirline(msg.sender);
         require(isRegistered, "Calling Airline is not registered.");
         require(funding >= MIN_FUNDING, "Calling Airline is not funded.");
         _;
-    }
-
-    modifier requireConsensus() {
-        require(
-            !approvedBy[currentApprovalIndex][msg.sender],
-            "This account already approved."
-        );
-
-        approvedBy[currentApprovalIndex][msg.sender] = true;
-        approvedCount++;
-        if (approvedCount == approvedM) {
-            approvedCount = 0;
-            currentApprovalIndex++;
-            _;
-        }
     }
 
     /********************************************************************************************/
@@ -100,11 +85,9 @@ contract FlightSuretyApp {
      * @dev Contract constructor
      *
      */
-    constructor(address dataContract, address firstAirline) public {
+    constructor(address dataContract) public {
         contractOwner = msg.sender;
         flightSuretyData = FlightSuretyData(dataContract);
-        // First one is on the house..
-        flightSuretyData.registerAirline(firstAirline);
     }
 
     /********************************************************************************************/
@@ -136,11 +119,29 @@ contract FlightSuretyApp {
         address account
     ) public requireIsAirlineAllowed returns (bool success, uint256 votes) {
         uint256 registeredAirlines = flightSuretyData.getRegisteredAirlines();
-        if (registeredAirlines <= 4) {
-            success = flightSuretyData.registerAirline(account);
-        } else {}
+        (bool isRegistered, , uint256 _votes) = flightSuretyData.getAirline(
+            account
+        );
+        require(!isRegistered, "Airline already registered.");
 
-        return (success, 0);
+        // require(
+        //     !(approvedBy[account] == msg.sender),
+        //     "This account already approved this airline."
+        // );
+        if (registeredAirlines > 4) {
+            _votes = _votes.add(1);
+            if (registeredAirlines.div(_votes) < APPROVED_M_RATIO) {
+                flightSuretyData.updateAirline(account, isRegistered, _votes);
+                success = true;
+                votes = _votes;
+            } else {
+                (success, votes) = flightSuretyData.registerAirline(account);
+            }
+        } else {
+            (success, votes) = flightSuretyData.registerAirline(account);
+        }
+
+        return (success, votes);
     }
 
     /**
@@ -351,9 +352,19 @@ contract FlightSuretyData {
 
     function setOperatingStatus(bool mode) external;
 
-    function registerAirline(address account) external returns (bool);
+    function registerAirline(
+        address account
+    ) external returns (bool success, uint256 _votes);
 
     function getRegisteredAirlines() public view returns (uint256);
 
-    function getAirline(address account) public view returns (bool, uint256);
+    function getAirline(
+        address account
+    ) public view returns (bool isRegistered, uint256 funding, uint256 votes);
+
+    function updateAirline(
+        address account,
+        bool _isRegistered,
+        uint256 _votes
+    ) external;
 }

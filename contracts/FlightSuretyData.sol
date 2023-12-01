@@ -15,6 +15,7 @@ contract FlightSuretyData {
     struct Airline {
         bool isRegistered;
         uint256 funding;
+        uint256 votes;
     }
 
     mapping(address => bool) private authorizedCallers;
@@ -30,8 +31,15 @@ contract FlightSuretyData {
      * @dev Constructor
      *      The deploying account becomes contractOwner
      */
-    constructor() public {
+    constructor(address firstAirline) public {
         contractOwner = msg.sender;
+        // First one is on the house..
+        airlines[firstAirline] = Airline({
+            isRegistered: true,
+            funding: 0,
+            votes: 0
+        });
+        airlinesRegistered.add(1);
     }
 
     /********************************************************************************************/
@@ -123,15 +131,29 @@ contract FlightSuretyData {
      
      */
     function registerAirline(
-        address account
+        address account,
+        uint256 _votes
     ) external requireIsCallerAuthorized requireIsOperational returns (bool) {
         require(
             !airlines[account].isRegistered,
             "Airline is already registered."
         );
-        airlines[account] = Airline({isRegistered: true, funding: 0});
-        airlinesRegistered.add(1);
+        airlines[account] = Airline({
+            isRegistered: true,
+            funding: 0,
+            votes: _votes
+        });
+        airlinesRegistered = airlinesRegistered.add(1);
         return airlines[account].isRegistered;
+    }
+
+    function updateAirline(
+        address account,
+        bool _isRegistered,
+        uint256 _votes
+    ) external requireIsCallerAuthorized requireIsOperational {
+        airlines[account].isRegistered = _isRegistered;
+        airlines[account].votes = _votes;
     }
 
     /**
