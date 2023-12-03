@@ -35,11 +35,11 @@ contract FlightSuretyApp {
     mapping(bytes32 => Flight) private flights;
     FlightSuretyData flightSuretyData;
 
-    // Voted airline => voter airlines
-    mapping(address => address[]) private approvedBy;
+    // keccak256(Voted airline + voter airline) => already voted?
+    mapping(bytes32 => bool) private approvedBy;
     uint8 private approvedCount = 0;
-    uint8 constant APPROVED_M_RATIO = 2;
-    uint256 private currentApprovalIndex = 0;
+    uint8 private constant APPROVED_M_RATIO = 2;
+    uint8 private constant CONSENSUS_THRESHOLD = 4;
 
     uint32 private constant MIN_FUNDING = 10;
 
@@ -77,6 +77,15 @@ contract FlightSuretyApp {
         _;
     }
 
+    modifier requireDidNotVoteFor(address account) {
+        bytes32 accounts = keccak256(abi.encode(account, msg.sender));
+        require(
+            !approvedBy[accounts],
+            "Caller has already voted for this airline."
+        );
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -98,13 +107,13 @@ contract FlightSuretyApp {
         return flightSuretyData.isOperational(); // Modify to call data contract's status
     }
 
-    function setOperational() public requireContractOwner {
-        flightSuretyData.setOperatingStatus(true);
-    }
+    // function setOperational() public requireContractOwner {
+    //     flightSuretyData.setOperatingStatus(true);
+    // }
 
-    function setNonOperational() public requireContractOwner {
-        flightSuretyData.setOperatingStatus(false);
-    }
+    // function setNonOperational() public requireContractOwner {
+    //     flightSuretyData.setOperatingStatus(false);
+    // }
 
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
@@ -117,31 +126,35 @@ contract FlightSuretyApp {
      */
     function registerAirline(
         address account
-    ) public requireIsAirlineAllowed returns (bool success, uint256 votes) {
-        uint256 registeredAirlines = flightSuretyData.getRegisteredAirlines();
+    )
+        public
+        requireIsAirlineAllowed
+        requireDidNotVoteFor(account)
+        returns (bool success, uint256 votes)
+    {
         (bool isRegistered, , uint256 _votes) = flightSuretyData.getAirline(
             account
         );
         require(!isRegistered, "Airline already registered.");
 
-        // require(
-        //     !(approvedBy[account] == msg.sender),
-        //     "This account already approved this airline."
-        // );
-        if (registeredAirlines > 4) {
-            _votes = _votes.add(1);
-            if (registeredAirlines.div(_votes) < APPROVED_M_RATIO) {
-                flightSuretyData.updateAirline(account, isRegistered, _votes);
-                success = true;
-                votes = _votes;
-            } else {
-                (success, votes) = flightSuretyData.registerAirline(account);
-            }
-        } else {
-            (success, votes) = flightSuretyData.registerAirline(account);
+        if (_votes == 0) {
+            flightSuretyData.registerAirline(account, _votes);
         }
 
-        return (success, votes);
+        uint256 registeredAirlines = flightSuretyData.getRegisteredAirlines();
+        if (registeredAirlines < CONSENSUS_THRESHOLD) {
+            isRegistered = true;
+        } else {
+            _votes = _votes.add(1);
+            if (
+                registeredAirlines.mul(10).div(APPROVED_M_RATIO) <=
+                _votes.mul(10)
+            ) {
+                isRegistered = true;
+            }
+        }
+        flightSuretyData.updateAirline(account, isRegistered, _votes);
+        return (isRegistered, _votes);
     }
 
     /**
@@ -352,9 +365,7 @@ contract FlightSuretyData {
 
     function setOperatingStatus(bool mode) external;
 
-    function registerAirline(
-        address account
-    ) external returns (bool success, uint256 _votes);
+    function registerAirline(address account, uint256 _votes) external;
 
     function getRegisteredAirlines() public view returns (uint256);
 

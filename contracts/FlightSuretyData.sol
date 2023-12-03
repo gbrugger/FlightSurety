@@ -39,7 +39,7 @@ contract FlightSuretyData {
             funding: 0,
             votes: 0
         });
-        airlinesRegistered.add(1);
+        airlinesRegistered = airlinesRegistered.add(1);
     }
 
     /********************************************************************************************/
@@ -117,8 +117,9 @@ contract FlightSuretyData {
 
     function getAirline(
         address account
-    ) public view requireIsOperational returns (bool, uint256) {
-        return (airlines[account].isRegistered, airlines[account].funding);
+    ) public view requireIsOperational returns (bool, uint256, uint256) {
+        Airline memory airline = airlines[account];
+        return (airline.isRegistered, airline.funding, airline.votes);
     }
 
     /********************************************************************************************/
@@ -133,18 +134,16 @@ contract FlightSuretyData {
     function registerAirline(
         address account,
         uint256 _votes
-    ) external requireIsCallerAuthorized requireIsOperational returns (bool) {
+    ) external requireIsCallerAuthorized requireIsOperational {
         require(
             !airlines[account].isRegistered,
             "Airline is already registered."
         );
         airlines[account] = Airline({
-            isRegistered: true,
+            isRegistered: false,
             funding: 0,
             votes: _votes
         });
-        airlinesRegistered = airlinesRegistered.add(1);
-        return airlines[account].isRegistered;
     }
 
     function updateAirline(
@@ -152,8 +151,12 @@ contract FlightSuretyData {
         bool _isRegistered,
         uint256 _votes
     ) external requireIsCallerAuthorized requireIsOperational {
-        airlines[account].isRegistered = _isRegistered;
-        airlines[account].votes = _votes;
+        Airline storage airline = airlines[account];
+        airline.isRegistered = _isRegistered;
+        airline.votes = _votes;
+        if (_isRegistered) {
+            airlinesRegistered = airlinesRegistered.add(1);
+        }
     }
 
     /**
@@ -178,7 +181,15 @@ contract FlightSuretyData {
      *      resulting in insurance payouts, the contract should be self-sustaining
      *
      */
-    function fund() public payable {}
+    function fund() public payable requireIsOperational {
+        require(
+            airlines[msg.sender].isRegistered,
+            "Airline must be registered to fund this Contract."
+        );
+        airlines[msg.sender].funding = msg.value.add(
+            airlines[msg.sender].funding
+        );
+    }
 
     function getFlightKey(
         address airline,
@@ -193,6 +204,7 @@ contract FlightSuretyData {
      *
      */
     function() external payable {
+        require(msg.data.length == 0);
         fund();
     }
 }
