@@ -21,11 +21,11 @@ export default class Contract {
       this.owner = accts[0];
 
       let counter = 1;
-
+      // Accounts 1 to 5 are airlines
       while (this.airlines.length < 5) {
         this.airlines.push(accts[counter++]);
       }
-
+      // Accounts 6 to 10 are passengers
       while (this.passengers.length < 5) {
         this.passengers.push(accts[counter++]);
       }

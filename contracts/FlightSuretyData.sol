@@ -16,12 +16,23 @@ contract FlightSuretyData {
         bool isRegistered;
         uint256 funding;
         uint256 votes;
+        string name;
+        address account;
     }
 
     mapping(address => bool) private authorizedCallers;
 
     mapping(address => Airline) private airlines;
-    uint256 private airlinesRegistered = 0;
+    Airline[] private airlinesRegistered;
+
+    struct Passenger {
+        address wallet;
+        uint256 funding;
+    }
+
+    mapping(address => Passenger) private passengers;
+
+    uint64 private constant MAX_INSURANCE = 1 ether;
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -37,9 +48,11 @@ contract FlightSuretyData {
         airlines[firstAirline] = Airline({
             isRegistered: true,
             funding: 0,
-            votes: 0
+            votes: 0,
+            name: "First Airline",
+            account: firstAirline
         });
-        airlinesRegistered = airlinesRegistered.add(1);
+        airlinesRegistered.push(airlines[firstAirline]);
     }
 
     /********************************************************************************************/
@@ -107,12 +120,16 @@ contract FlightSuretyData {
     }
 
     function getRegisteredAirlines()
-        public
+        external
         view
         requireIsOperational
-        returns (uint256)
+        returns (Airline[] memory)
     {
-        return airlinesRegistered;
+        Airline[] memory result = new Airline[](airlinesRegistered.length);
+        for (uint32 i = 0; i < airlinesRegistered.length; i++) {
+            result[i] = airlinesRegistered[i];
+        }
+        return result;
     }
 
     function getAirline(
@@ -133,7 +150,8 @@ contract FlightSuretyData {
      */
     function registerAirline(
         address account,
-        uint256 _votes
+        uint256 _votes,
+        string _name
     ) external requireIsCallerAuthorized requireIsOperational {
         require(
             !airlines[account].isRegistered,
@@ -142,7 +160,9 @@ contract FlightSuretyData {
         airlines[account] = Airline({
             isRegistered: false,
             funding: 0,
-            votes: _votes
+            votes: _votes,
+            name: _name,
+            account: account
         });
     }
 
@@ -155,7 +175,8 @@ contract FlightSuretyData {
         airline.isRegistered = _isRegistered;
         airline.votes = _votes;
         if (_isRegistered) {
-            airlinesRegistered = airlinesRegistered.add(1);
+            airlinesRegistered.push(airline);
+            // airlinesRegistered = airlinesRegistered.add(1);
         }
     }
 

@@ -125,7 +125,8 @@ contract FlightSuretyApp {
      *      Only existing airline may register a new airline (business rules in App contract)
      */
     function registerAirline(
-        address account
+        address account,
+        string name
     )
         public
         requireIsAirlineAllowed
@@ -138,7 +139,7 @@ contract FlightSuretyApp {
         require(!isRegistered, "Airline already registered.");
 
         if (_votes == 0) {
-            flightSuretyData.registerAirline(account, _votes);
+            flightSuretyData.registerAirline(account, _votes, name);
         }
 
         uint256 registeredAirlines = flightSuretyData.getRegisteredAirlines();
@@ -365,7 +366,11 @@ contract FlightSuretyData {
 
     function setOperatingStatus(bool mode) external;
 
-    function registerAirline(address account, uint256 _votes) external;
+    function registerAirline(
+        address account,
+        uint256 _votes,
+        string name
+    ) external;
 
     function getRegisteredAirlines() public view returns (uint256);
 

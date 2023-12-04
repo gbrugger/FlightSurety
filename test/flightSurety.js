@@ -101,7 +101,7 @@ contract("Flight Surety Tests", async (accounts) => {
 
     // ACT
     try {
-      await config.flightSuretyApp.registerAirline(newAirline, {
+      await config.flightSuretyApp.registerAirline(newAirline, "Second", {
         from: config.firstAirline,
       });
     } catch (e) {
@@ -156,7 +156,7 @@ contract("Flight Surety Tests", async (accounts) => {
 
     // ACT
     try {
-      await config.flightSuretyApp.registerAirline(newAirline, {
+      await config.flightSuretyApp.registerAirline(newAirline, "Second", {
         from: config.firstAirline,
       });
     } catch (e) {
@@ -179,9 +179,13 @@ contract("Flight Surety Tests", async (accounts) => {
       const newAirline = accounts[idx];
       // ACT
       try {
-        await config.flightSuretyApp.registerAirline(newAirline, {
-          from: config.firstAirline,
-        });
+        await config.flightSuretyApp.registerAirline(
+          newAirline,
+          `Other-${idx}`,
+          {
+            from: config.firstAirline,
+          }
+        );
       } catch (e) {
         assert(false, `An error occured during tx: ${e.message}`);
       }
@@ -239,9 +243,13 @@ contract("Flight Surety Tests", async (accounts) => {
       idx++;
       // ACT
       try {
-        await config.flightSuretyApp.registerAirline(newAirline, {
-          from: accounts[idx], //accounts[0] is owner
-        });
+        await config.flightSuretyApp.registerAirline(
+          newAirline,
+          `Other-${idx}`,
+          {
+            from: accounts[idx], //accounts[0] is owner
+          }
+        );
       } catch (e) {
         assert(false, `An error occured during tx: ${e.message}`);
       }
