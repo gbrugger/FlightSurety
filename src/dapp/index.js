@@ -8,7 +8,6 @@ import "./flightsurety.css";
   let contract = new Contract("localhost", () => {
     // Read transaction
     contract.isOperational((error, result) => {
-      console.log(error, result);
       display("Operational Status", "Check if contract is operational", [
         { label: "Operational Status", error: error, value: result },
       ]);
@@ -28,6 +27,35 @@ import "./flightsurety.css";
         ]);
       });
     });
+
+    // Register Airline
+    DOM.elid("submit-airline").addEventListener("click", () => {
+      const airlineAddress = DOM.elid("airline-address").value;
+      const airlineName = DOM.elid("airline-name").value;
+      contract.registerAirline(airlineAddress, airlineName, (error, result) => {
+        display("Airline", "Airline Registration", [
+          {
+            label: "Registered Airline",
+            error: error,
+            value: result.airlineName,
+          },
+        ]);
+      });
+    });
+
+    // Fund Airline
+    DOM.elid("submit-funds").addEventListener("click", () => {
+      const airlineFunds = DOM.elid("airline-funds").value;
+      contract.fundAirline(airlineFunds, (error, payload) => {
+        display("Airline", "Airline Funding", [
+          {
+            label: "Funded Airline",
+            error: error,
+            value: `Sent ${payload.amount} to ${payload.fundsTo}. Balance is now ${payload.balance}.`,
+          },
+        ]);
+      });
+    });
   });
 })();
 
@@ -36,7 +64,7 @@ function display(title, description, results) {
   let section = DOM.section();
   section.appendChild(DOM.h2(title));
   section.appendChild(DOM.h5(description));
-  results.map((result) => {
+  results.map(result => {
     let row = section.appendChild(DOM.div({ className: "row" }));
     row.appendChild(DOM.div({ className: "col-sm-4 field" }, result.label));
     row.appendChild(
@@ -49,3 +77,5 @@ function display(title, description, results) {
   });
   displayDiv.append(section);
 }
+
+const updateAirlineDropdown = () => {};

@@ -12,6 +12,10 @@ To install, download or clone the repo, then:
 
 `truffle compile`
 
+Start Ganache using this mnemonic:
+
+`npx ganache-cli -m "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat" -a 100`
+
 ## Develop Client
 
 To run truffle tests:
@@ -29,6 +33,18 @@ To use the dapp:
 To view dapp:
 
 `http://localhost:8000`
+
+Add Ganache running on localhost:8545 as a Network to Metamask to be able to use the wallets and simulate correct authentication.
+
+Add accounts (1) and (2) as airlines. Account 1 is registered when contract is deployed and is automatically funded by dapp.
+
+Add account(6) as passenger.
+
+Switch to account[0] in Metamask and load the page for the first time. The app contract will be authorized.
+
+Switch to account[1] in Metamask and fund the contract with 10 ETH, to be able to participate. Register an airline with the address of account[2].
+
+Switch to account[1] in Metamask and buy insurance for up to 1 ETH.
 
 ## Develop Server
 

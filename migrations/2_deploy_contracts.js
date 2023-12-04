@@ -13,6 +13,7 @@ module.exports = function (deployer) {
             url: "http://localhost:8545",
             dataAddress: FlightSuretyData.address,
             appAddress: FlightSuretyApp.address,
+            firstAirline: firstAirline,
           },
         };
         fs.writeFileSync(

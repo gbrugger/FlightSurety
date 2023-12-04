@@ -1,6 +1,6 @@
 const Test = require("../config/testConfig.js");
 
-contract("Flight Surety Tests", async (accounts) => {
+contract("Flight Surety Tests", async accounts => {
   let config;
   before("setup contract", async () => {
     config = await Test.Config(accounts);
@@ -12,11 +12,11 @@ contract("Flight Surety Tests", async (accounts) => {
   /****************************************************************************************/
   /* Operations and Settings                                                              */
   /****************************************************************************************/
+
   it(`(multiparty) should register first airline when data contract is deployed.`, async function () {
     const result = await config.flightSuretyData.getAirline(
       config.firstAirline
     );
-    // console.log(result);
     assert.equal(result[0], true, "First airline not registered.");
   });
 
@@ -102,13 +102,12 @@ contract("Flight Surety Tests", async (accounts) => {
     // ACT
     try {
       await config.flightSuretyApp.registerAirline(newAirline, "Second", {
-        from: config.firstAirline,
+        from: accounts[1],
       });
     } catch (e) {
       // console.error(e.message);
     }
     const result = await config.flightSuretyData.getAirline(newAirline);
-    // console.log(result);
 
     // ASSERT
     assert.equal(
@@ -120,32 +119,33 @@ contract("Flight Surety Tests", async (accounts) => {
 
   it("(airline) can provide funds to contract", async () => {
     // ARRANGE
-    const initialBalance = await web3.eth.getBalance(
-      config.flightSuretyData.address
+    const initialBalance = web3.utils.toBN(
+      await web3.eth.getBalance(config.flightSuretyData.address)
     );
-
+    const bn10 = web3.utils.toWei(web3.utils.toBN(10), "ether");
     // ACT
     try {
       await config.flightSuretyData.fund({
-        from: accounts[1],
-        value: web3.utils.toWei("10", "ether"),
+        from: config.firstAirline,
+        value: bn10,
       });
     } catch (e) {
+      console.log(e);
       assert(false, `An error occured during tx: ${e.message}`);
     }
-    const finalBalance = await web3.eth.getBalance(
-      config.flightSuretyData.address
+    const finalBalance = web3.utils.toBN(
+      await web3.eth.getBalance(config.flightSuretyData.address)
     );
     const result = await config.flightSuretyData.getAirline(accounts[1]);
     const balance = result[1];
 
     // ASSERT
     assert(
-      finalBalance - initialBalance >= web3.utils.toWei("10", "ether"),
+      bn10.lte(finalBalance.sub(initialBalance)),
       "Registered Airline could not provid funding."
     );
     assert(
-      balance == web3.utils.toWei("10", "ether"),
+      balance.eq(bn10),
       "Registered Airline did not receive funding in data Contract."
     );
   });
@@ -200,7 +200,7 @@ contract("Flight Surety Tests", async (accounts) => {
     }
   });
 
-  it("(airline) can provide funds to contract", async () => {
+  it("(airline) can provide funds to contract for registered airlines to be able to vote", async () => {
     for (let idx of Array(3).keys()) {
       idx += 2;
       // ARRANGE
@@ -271,5 +271,35 @@ contract("Flight Surety Tests", async (accounts) => {
         );
       }
     }
+  });
+
+  it("(airline) cannot vote to register an Airline twice", async () => {
+    // ARRANGE
+    const newAirline = accounts[6]; //accounts[5] is the last one registered
+    const accNum = 1;
+    let reverted;
+    for (let idx of Array(2).keys()) {
+      // ACT
+      try {
+        await config.flightSuretyApp.registerAirline(
+          newAirline,
+          `Other-${idx}`,
+          {
+            from: accounts[accNum], //accounts[0] is owner
+          }
+        );
+        if (idx > 0) {
+          // Should throw on second pass, just being sure.
+          assert(false, "Airline voted twice for the same candidate.");
+        }
+      } catch (e) {
+        e.message === "Airline voted twice for the same candidate."
+          ? (reverted = true)
+          : (reverted = false);
+        // console.log(e.message);
+      }
+    }
+    // ASSERT
+    assert.equal(reverted, true, "Airline voted twice for the same candidate.");
   });
 });

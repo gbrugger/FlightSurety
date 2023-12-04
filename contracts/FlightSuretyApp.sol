@@ -41,7 +41,7 @@ contract FlightSuretyApp {
     uint8 private constant APPROVED_M_RATIO = 2;
     uint8 private constant CONSENSUS_THRESHOLD = 4;
 
-    uint32 private constant MIN_FUNDING = 10;
+    uint256 private constant MIN_FUNDING = 10 ether;
 
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
@@ -70,8 +70,9 @@ contract FlightSuretyApp {
     }
 
     modifier requireIsAirlineAllowed() {
-        (bool isRegistered, uint256 funding, uint256 votes) = flightSuretyData
-            .getAirline(msg.sender);
+        (bool isRegistered, uint256 funding, , ) = flightSuretyData.getAirline(
+            msg.sender
+        );
         require(isRegistered, "Calling Airline is not registered.");
         require(funding >= MIN_FUNDING, "Calling Airline is not funded.");
         _;
@@ -133,7 +134,7 @@ contract FlightSuretyApp {
         requireDidNotVoteFor(account)
         returns (bool success, uint256 votes)
     {
-        (bool isRegistered, , uint256 _votes) = flightSuretyData.getAirline(
+        (bool isRegistered, , uint256 _votes, ) = flightSuretyData.getAirline(
             account
         );
         require(!isRegistered, "Airline already registered.");
@@ -142,10 +143,17 @@ contract FlightSuretyApp {
             flightSuretyData.registerAirline(account, _votes, name);
         }
 
-        uint256 registeredAirlines = flightSuretyData.getRegisteredAirlines();
+        uint256 registeredAirlines = flightSuretyData
+            .getRegisteredAirlines()
+            .length;
         if (registeredAirlines < CONSENSUS_THRESHOLD) {
             isRegistered = true;
         } else {
+            // Register voters to ensure one account only votes once. Used by modifier.
+            // Concatenates with voted for address and use as key to avoid loops in arrays.
+            // The original values are irrecoverable, but unnecessary.
+            bytes32 key = keccak256(abi.encodePacked(account, msg.sender));
+            approvedBy[key] = true;
             _votes = _votes.add(1);
             if (
                 registeredAirlines.mul(10).div(APPROVED_M_RATIO) <=
@@ -372,11 +380,19 @@ contract FlightSuretyData {
         string name
     ) external;
 
-    function getRegisteredAirlines() public view returns (uint256);
+    function getRegisteredAirlines() public view returns (address[] memory);
 
     function getAirline(
         address account
-    ) public view returns (bool isRegistered, uint256 funding, uint256 votes);
+    )
+        public
+        view
+        returns (
+            bool isRegistered,
+            uint256 funding,
+            uint256 votes,
+            string name
+        );
 
     function updateAirline(
         address account,

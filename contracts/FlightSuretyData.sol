@@ -17,13 +17,12 @@ contract FlightSuretyData {
         uint256 funding;
         uint256 votes;
         string name;
-        address account;
     }
 
     mapping(address => bool) private authorizedCallers;
 
     mapping(address => Airline) private airlines;
-    Airline[] private airlinesRegistered;
+    address[] private airlinesRegistered;
 
     struct Passenger {
         address wallet;
@@ -49,10 +48,9 @@ contract FlightSuretyData {
             isRegistered: true,
             funding: 0,
             votes: 0,
-            name: "First Airline",
-            account: firstAirline
+            name: "First Airline"
         });
-        airlinesRegistered.push(airlines[firstAirline]);
+        airlinesRegistered.push(firstAirline);
     }
 
     /********************************************************************************************/
@@ -107,6 +105,10 @@ contract FlightSuretyData {
         operational = mode;
     }
 
+    function isCallerAuthorized(address account) public view returns (bool) {
+        return authorizedCallers[account];
+    }
+
     function authorizeCaller(
         address contractAddress
     ) external requireContractOwner requireIsOperational {
@@ -123,20 +125,26 @@ contract FlightSuretyData {
         external
         view
         requireIsOperational
-        returns (Airline[] memory)
+        returns (address[] memory)
     {
-        Airline[] memory result = new Airline[](airlinesRegistered.length);
-        for (uint32 i = 0; i < airlinesRegistered.length; i++) {
-            result[i] = airlinesRegistered[i];
-        }
-        return result;
+        return airlinesRegistered;
     }
 
     function getAirline(
         address account
-    ) public view requireIsOperational returns (bool, uint256, uint256) {
+    )
+        public
+        view
+        requireIsOperational
+        returns (bool, uint256, uint256, string)
+    {
         Airline memory airline = airlines[account];
-        return (airline.isRegistered, airline.funding, airline.votes);
+        return (
+            airline.isRegistered,
+            airline.funding,
+            airline.votes,
+            airline.name
+        );
     }
 
     /********************************************************************************************/
@@ -161,8 +169,7 @@ contract FlightSuretyData {
             isRegistered: false,
             funding: 0,
             votes: _votes,
-            name: _name,
-            account: account
+            name: _name
         });
     }
 
@@ -175,8 +182,7 @@ contract FlightSuretyData {
         airline.isRegistered = _isRegistered;
         airline.votes = _votes;
         if (_isRegistered) {
-            airlinesRegistered.push(airline);
-            // airlinesRegistered = airlinesRegistered.add(1);
+            airlinesRegistered.push(account);
         }
     }
 
