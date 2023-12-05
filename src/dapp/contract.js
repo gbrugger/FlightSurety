@@ -48,6 +48,10 @@ export default class Contract {
         await this.flightSuretyData.methods
           .authorizeCaller(this.config.appAddress)
           .send({ from: this.owner });
+
+      this.flightSuretyData.events.FundedAirline((err, response) =>
+        console.log(response)
+      );
     } catch (error) {
       console.error(error);
     }
@@ -134,6 +138,29 @@ export default class Contract {
 
       callback(error, payload);
     } catch (e) {
+      callback(e.message, payload);
+    }
+  };
+
+  buyInsurance = async (airline, flight, timestamp, value, callback) => {
+    const self = this;
+    let accounts = await self.web3.eth.getAccounts();
+    const passenger = accounts[0];
+    timestamp /= 1000;
+    const payload = {
+      amount: value,
+      flight: flight,
+    };
+    try {
+      const { error, resultHash } = await self.flightSuretyApp.methods
+        .buy(passenger, airline, flight, timestamp)
+        .send({
+          from: passenger,
+          value: self.web3.utils.toWei(payload.amount, "ether"),
+        });
+      callback(error, payload);
+    } catch (e) {
+      console.error(e);
       callback(e.message, payload);
     }
   };

@@ -125,7 +125,7 @@ contract("Flight Surety Tests", async accounts => {
     const bn10 = web3.utils.toWei(web3.utils.toBN(10), "ether");
     // ACT
     try {
-      await config.flightSuretyData.fund({
+      await config.flightSuretyData.fund(config.firstAirline, {
         from: config.firstAirline,
         value: bn10,
       });
@@ -210,7 +210,7 @@ contract("Flight Surety Tests", async accounts => {
 
       // ACT
       try {
-        await config.flightSuretyData.fund({
+        await config.flightSuretyData.fund(accounts[idx], {
           from: accounts[idx],
           value: web3.utils.toWei("10", "ether"),
         });
@@ -301,5 +301,69 @@ contract("Flight Surety Tests", async accounts => {
     }
     // ASSERT
     assert.equal(reverted, true, "Airline voted twice for the same candidate.");
+  });
+
+  it("(passenger) can buy insurance for up to 1 ETH", async () => {
+    // ARRANGE
+    const passenger = accounts[6];
+    const airline = accounts[1];
+    const flight = "LA-3333";
+    const dtStr = "05/02/2023";
+    const [d, m, y] = dtStr.split(/-|\//);
+    const date = new Date(y, m - 1, d);
+    const timestamp = date.getTime() / 1000;
+    const val = web3.utils.toWei("0.5", "ether");
+    // ACT
+    try {
+      await config.flightSuretyApp.buy(passenger, airline, flight, timestamp, {
+        from: passenger,
+        value: val,
+      });
+    } catch (e) {
+      assert(false, `An error occured during tx: ${e.message}`);
+    }
+    const key = await config.flightSuretyApp.getInsuranceKey(
+      passenger,
+      airline,
+      flight,
+      timestamp
+    );
+    const result = await config.flightSuretyData.getInsuranceValue(key);
+
+    // ASSERT
+    assert.equal(result.gte(val), true, "Could not buy insurance.");
+  });
+
+  it("(passenger) cannot buy insurance for more than 1 ETH", async () => {
+    // ARRANGE
+    const passenger = accounts[7];
+    const airline = accounts[1];
+    const flight = "LA-3333";
+    const dtStr = "05/02/2023";
+    const [d, m, y] = dtStr.split(/-|\//);
+    const date = new Date(y, m - 1, d);
+    const timestamp = date.getTime() / 1000;
+    const val = web3.utils.toWei("1.001", "ether");
+    // ACT
+    let reverted;
+    try {
+      await config.flightSuretyApp.buy(passenger, airline, flight, timestamp, {
+        from: passenger,
+        value: val,
+      });
+    } catch (e) {
+      reverted = true;
+    }
+    const key = await config.flightSuretyApp.getInsuranceKey(
+      passenger,
+      airline,
+      flight,
+      timestamp
+    );
+    const result = await config.flightSuretyData.getInsuranceValue(key);
+
+    // ASSERT
+    assert.equal(result, 0, "Bought insurance for more than 1 ETH.");
+    assert.equal(reverted, true, "Bought insurance for more than 1 ETH.");
   });
 });

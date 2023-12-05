@@ -34,17 +34,20 @@ To view dapp:
 
 `http://localhost:8000`
 
-Add Ganache running on localhost:8545 as a Network to Metamask to be able to use the wallets and simulate correct authentication.
+Add Ganache running on localhost:8545 as a Network to Metamask to be able to use the wallets and simulate correct authorization for each profile.
 
-Add accounts (1) and (2) as airlines. Account 1 is registered when contract is deployed and is automatically funded by dapp.
+Account [1] is registered when contract is deployed.
+Add accounts [1] and [2] to Metamask as airlines.
 
-Add account(6) as passenger.
+Add account [6] to Metamask as passenger.
 
-Switch to account[0] in Metamask and load the page for the first time. The app contract will be authorized.
+Switch to account [0] (contract owner) in Metamask and load the page for the first time. The app contract will be authorized. If you use an account other than the data contract's owner, authorization will not work.
 
-Switch to account[1] in Metamask and fund the contract with 10 ETH, to be able to participate. Register an airline with the address of account[2].
+Switch to account [1] in Metamask and fund the contract with 10 ETH, to be able to participate. Then, register an airline with the address of account [2].
 
-Switch to account[1] in Metamask and buy insurance for up to 1 ETH.
+Switch to account [2] in Metamask and fund airline with account [2] to make the first 2 flights in the flight list to work. In a real dapp, the flight list would be dynamic,as airlines engage with the contract.
+
+Switch to account [6] in Metamask and buy insurance for up to 1 ETH in one of the flights. If the airline that provides the flight is not funded, an error will be thrown in the UI.
 
 ## Develop Server
 

@@ -33,6 +33,10 @@ contract FlightSuretyData {
 
     uint64 private constant MAX_INSURANCE = 1 ether;
 
+    mapping(bytes32 => uint256) private insurance;
+
+    event FundedAirline(address airline, uint256 funds);
+
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
@@ -190,7 +194,20 @@ contract FlightSuretyData {
      * @dev Buy insurance for a flight
      *
      */
-    function buy() external payable {}
+    function buy(
+        bytes32 key,
+        uint256 value
+    ) external requireIsCallerAuthorized requireIsOperational {
+        uint256 current = getInsuranceValue(key);
+        // uint256 target in mapping defaults to 0
+        insurance[key] = current.add(value);
+    }
+
+    function getInsuranceValue(
+        bytes32 key
+    ) public view requireIsOperational returns (uint256) {
+        return insurance[key];
+    }
 
     /**
      *  @dev Credits payouts to insurees
@@ -209,13 +226,21 @@ contract FlightSuretyData {
      *
      */
     function fund() public payable requireIsOperational {
+        fund(msg.sender);
+    }
+
+    /**
+     * @dev Initial funding for the insurance. Unless there are too many delayed flights
+     *      resulting in insurance payouts, the contract should be self-sustaining
+     *
+     */
+    function fund(address account) public payable requireIsOperational {
         require(
-            airlines[msg.sender].isRegistered,
-            "Airline must be registered to fund this Contract."
+            airlines[account].isRegistered,
+            "Airline must be registered to receive funds in this Contract."
         );
-        airlines[msg.sender].funding = msg.value.add(
-            airlines[msg.sender].funding
-        );
+        airlines[account].funding = msg.value.add(airlines[account].funding);
+        emit FundedAirline(account, msg.value);
     }
 
     function getFlightKey(
@@ -232,6 +257,6 @@ contract FlightSuretyData {
      */
     function() external payable {
         require(msg.data.length == 0);
-        fund();
+        fund(msg.sender);
     }
 }

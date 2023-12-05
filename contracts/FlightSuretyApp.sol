@@ -70,11 +70,10 @@ contract FlightSuretyApp {
     }
 
     modifier requireIsAirlineAllowed() {
-        (bool isRegistered, uint256 funding, , ) = flightSuretyData.getAirline(
-            msg.sender
+        require(
+            isAirlineAllowed(msg.sender),
+            "Airline not allowed to participate."
         );
-        require(isRegistered, "Calling Airline is not registered.");
-        require(funding >= MIN_FUNDING, "Calling Airline is not funded.");
         _;
     }
 
@@ -115,6 +114,15 @@ contract FlightSuretyApp {
     // function setNonOperational() public requireContractOwner {
     //     flightSuretyData.setOperatingStatus(false);
     // }
+
+    function isAirlineAllowed(address airline) public view returns (bool) {
+        (bool isRegistered, uint256 funding, , ) = flightSuretyData.getAirline(
+            airline
+        );
+        require(isRegistered, "Airline is not registered.");
+        require(funding >= MIN_FUNDING, "Airline is not funded.");
+        return isRegistered;
+    }
 
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
@@ -164,6 +172,70 @@ contract FlightSuretyApp {
         }
         flightSuretyData.updateAirline(account, isRegistered, _votes);
         return (isRegistered, _votes);
+    }
+
+    function getInsuranceKey(
+        address passenger,
+        address airline,
+        string flight,
+        uint256 timestamp
+    ) public pure returns (bytes32) {
+        return
+            keccak256(abi.encodePacked(passenger, airline, flight, timestamp));
+    }
+
+    /**
+     * @dev Buy insurance for a flight
+     *
+     */
+    function buy(
+        address passenger,
+        address airline,
+        string flight,
+        uint256 timestamp
+    ) external payable {
+        require(
+            (msg.value > 0 ether) && (msg.value <= 1 ether),
+            "Invalid value for insurance. Max: Up to 1 ETH."
+        );
+        require(
+            isAirlineAllowed(airline),
+            "Airline not allowed to participate."
+        );
+
+        (, uint256 _funds, , ) = flightSuretyData.getAirline(airline);
+        require(
+            _funds.add(msg.value) >= getInsuranceValue(msg.value),
+            "Airline does not have enough funds to honor payments."
+        );
+
+        bytes32 key = getInsuranceKey(passenger, airline, flight, timestamp);
+        uint256 insuredValue = flightSuretyData.getInsuranceValue(key);
+        // May add up to existing insurance, but up to 1 ETH
+        require(
+            insuredValue.add(msg.value) <= 1 ether,
+            "Invalid value for insurance. Min: >0, Max: <=1 ETH."
+        );
+        // For Solidity 0.6+ the syntax to forward funds is:
+        // address.function{value:msg.value}(arg1, arg2, arg3)
+        // flightSuretyData.fund{value: msg.value}(airline);
+        flightSuretyData.fund.value(msg.value)(airline);
+        flightSuretyData.buy(key, msg.value);
+    }
+
+    // function airlineHasFunds(
+    //     address airline,
+    //     uint256 amount
+    // ) internal view returns (bool) {
+
+    // }
+
+    /**
+     * @dev Calculate the insurance result based on how much was paid.
+     *
+     */
+    function getInsuranceValue(uint256 amount) internal pure returns (uint256) {
+        return amount.mul(3).div(2);
     }
 
     /**
@@ -369,8 +441,8 @@ contract FlightSuretyApp {
     // endregion
 }
 
-contract FlightSuretyData {
-    function isOperational() public view returns (bool);
+interface FlightSuretyData {
+    function isOperational() external view returns (bool);
 
     function setOperatingStatus(bool mode) external;
 
@@ -380,12 +452,12 @@ contract FlightSuretyData {
         string name
     ) external;
 
-    function getRegisteredAirlines() public view returns (address[] memory);
+    function getRegisteredAirlines() external view returns (address[] memory);
 
     function getAirline(
         address account
     )
-        public
+        external
         view
         returns (
             bool isRegistered,
@@ -399,4 +471,10 @@ contract FlightSuretyData {
         bool _isRegistered,
         uint256 _votes
     ) external;
+
+    function buy(bytes32 key, uint256 value) external payable;
+
+    function fund(address account) external payable;
+
+    function getInsuranceValue(bytes32 key) external view returns (uint256);
 }

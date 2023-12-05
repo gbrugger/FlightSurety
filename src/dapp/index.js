@@ -51,10 +51,38 @@ import "./flightsurety.css";
           {
             label: "Funded Airline",
             error: error,
-            value: `Sent ${payload.amount} to ${payload.fundsTo}. Balance is now ${payload.balance}.`,
+            value: `Sent ${payload.amount} ETH to ${payload.fundsTo}. Balance is now ${payload.balance}.`,
           },
         ]);
       });
+    });
+
+    // Buy insurance
+    DOM.elid("buy-insurance").addEventListener("click", () => {
+      const airline = DOM.elid("buyInsuranceOption").value;
+      const sel = DOM.elid("buyInsuranceOption");
+      var flight = sel.options[sel.selectedIndex].text;
+      const val = DOM.elid("buyInsuranceValue").value;
+      const ts = DOM.elid("buyInsuranceTimestamp").value;
+      const [m, d, y] = ts.split(/-|\//);
+      const date = new Date(y, m - 1, d);
+      const timestamp = date.getTime();
+      console.log(airline, flight, val, timestamp);
+      contract.buyInsurance(
+        airline,
+        flight,
+        timestamp,
+        val,
+        (error, payload) => {
+          display("Insurance", "Buy Insurance", [
+            {
+              label: "Result",
+              error: error,
+              value: `Bought insurance of ${payload.amount} ETH for flight ${payload.flight}.`,
+            },
+          ]);
+        }
+      );
     });
   });
 })();
