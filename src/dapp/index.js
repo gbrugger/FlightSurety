@@ -15,17 +15,28 @@ import "./flightsurety.css";
 
     // User-submitted transaction
     DOM.elid("submit-oracle").addEventListener("click", () => {
-      let flight = DOM.elid("flight-number").value;
+      const airline = DOM.elid("flightStatusOption").value;
+      const sel = DOM.elid("flightStatusOption");
+      var flight = sel.options[sel.selectedIndex].text;
+      const ts = DOM.elid("flightStatusTimestamp").value;
+      const [m, d, y] = ts.split(/-|\//);
+      const date = new Date(y, m - 1, d);
+      const timestamp = date.getTime();
       // Write transaction
-      contract.fetchFlightStatus(flight, (error, result) => {
-        display("Oracles", "Trigger oracles", [
-          {
-            label: "Fetch Flight Status",
-            error: error,
-            value: result.flight + " " + result.timestamp,
-          },
-        ]);
-      });
+      contract.fetchFlightStatus(
+        airline,
+        flight,
+        timestamp,
+        (error, result) => {
+          display("Oracles", "Trigger oracles", [
+            {
+              label: "Fetch Flight Status",
+              error: error,
+              value: result.flight + " " + result.timestamp,
+            },
+          ]);
+        }
+      );
     });
 
     // Register Airline

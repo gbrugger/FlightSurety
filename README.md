@@ -43,7 +43,7 @@ Add account [6] to Metamask as passenger.
 
 Switch to account [0] (contract owner) in Metamask and load the page for the first time. The app contract will be authorized. If you use an account other than the data contract's owner, authorization will not work.
 
-Switch to account [1] in Metamask and fund the contract with 10 ETH, to be able to participate. Then, register an airline with the address of account [2].
+Switch to account [1] in Metamask and fund the contract with 10 ETH, to be able to participate. The event will be printed to the server console. Then, register an airline with the address of account [2].
 
 Switch to account [2] in Metamask and fund airline with account [2] to make the first 2 flights in the flight list to work. In a real dapp, the flight list would be dynamic,as airlines engage with the contract.
 

@@ -26,13 +26,13 @@ contract FlightSuretyApp {
 
     address private contractOwner; // Account used to deploy contract
 
-    struct Flight {
-        bool isRegistered;
-        uint8 statusCode;
-        uint256 updatedTimestamp;
-        address airline;
-    }
-    mapping(bytes32 => Flight) private flights;
+    // struct Flight {
+    //     bool isRegistered;
+    //     uint8 statusCode;
+    //     uint256 updatedTimestamp;
+    //     address airline;
+    // }
+    // mapping(bytes32 => Flight) private flights;
     FlightSuretyData flightSuretyData;
 
     // keccak256(Voted airline + voter airline) => already voted?
@@ -244,6 +244,13 @@ contract FlightSuretyApp {
      */
     function registerFlight() external pure {}
 
+    // Flight data persisted forever
+    struct FlightStatus {
+        bool hasStatus;
+        uint8 status;
+    }
+    mapping(bytes32 => FlightStatus) flights;
+
     /**
      * @dev Called after oracle has updated flight status
      *
@@ -253,7 +260,10 @@ contract FlightSuretyApp {
         string memory flight,
         uint256 timestamp,
         uint8 statusCode
-    ) internal pure {}
+    ) internal {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        flights[flightKey] = FlightStatus(true, statusCode);
+    }
 
     // Generate a request for oracles to fetch flight information
     function fetchFlightStatus(
@@ -292,6 +302,7 @@ contract FlightSuretyApp {
     }
 
     // Track all registered oracles
+    // Key = hash(index, flight, timestamp)
     mapping(address => Oracle) private oracles;
 
     // Model for responses from oracles
@@ -374,7 +385,7 @@ contract FlightSuretyApp {
         );
         require(
             oracleResponses[key].isOpen,
-            "Flight or timestamp do not match oracle request"
+            "Flight or timestamp does not match oracle request"
         );
 
         oracleResponses[key].responses[statusCode].push(msg.sender);

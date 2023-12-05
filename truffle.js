@@ -6,9 +6,9 @@ module.exports = {
   networks: {
     development: {
       provider: function () {
-        return new HDWalletProvider(mnemonic, "http://127.0.0.1:8545/", 0, 10);
+        return new HDWalletProvider(mnemonic, "http://127.0.0.1:8545/", 0, 20);
       },
-      network_id: "1701786867297",
+      network_id: "*",
       // gas: 9999999
     },
   },

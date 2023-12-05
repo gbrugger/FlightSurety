@@ -82,12 +82,13 @@ export default class Contract {
       .call({ from: self.owner }, callback);
   }
 
-  fetchFlightStatus(flight, callback) {
+  fetchFlightStatus(airline, flight, timestamp, callback) {
     const self = this;
+    timestamp /= 1000;
     const payload = {
-      airline: self.airlines[0],
+      airline: airline,
       flight: flight,
-      timestamp: Math.floor(Date.now() / 1000),
+      timestamp: timestamp,
     };
     self.flightSuretyApp.methods
       .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
