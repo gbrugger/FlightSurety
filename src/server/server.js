@@ -69,11 +69,12 @@ import express from "express";
           .call({
             from: accounts[a],
           });
-        console.log("OracleIndexes", oracleIndexes);
+        // console.log("OracleIndexes", oracleIndexes);
         const flight = event.returnValues.flight;
         const timestamp = event.returnValues.timestamp;
         const airline = event.returnValues.airline;
         const STATUS = getRandomStatus();
+        // console.log("STATUS", STATUS);
         for (let idx = 0; idx < 3; idx++) {
           try {
             // Submit a response...it will only be accepted if there is an Index match
@@ -87,7 +88,7 @@ import express from "express";
               )
               .send({ from: accounts[a], gas: 20000000 });
           } catch (e) {
-            console.log("\nError", idx, oracleIndexes[idx], flight, timestamp);
+            // console.log("\nError", idx, oracleIndexes[idx], flight, timestamp);
           }
         }
       }
@@ -109,6 +110,7 @@ app.get("/api", (req, res) => {
   });
 });
 const getRandomStatus = () => {
+  // return 20;
   return (Math.round(Math.random() * 10) % 6) * 10;
 };
 export default app;

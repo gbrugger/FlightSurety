@@ -204,8 +204,9 @@ contract FlightSuretyApp {
         );
 
         (, uint256 _funds, , ) = flightSuretyData.getAirline(airline);
+        // In a real world scenario, insurance payments would follow a probabilistic model
         require(
-            _funds.add(msg.value) >= getInsuranceValue(msg.value),
+            _funds.add(msg.value) >= calculateInsuranceValue(msg.value),
             "Airline does not have enough funds to honor payments."
         );
 
@@ -220,21 +221,16 @@ contract FlightSuretyApp {
         // address.function{value:msg.value}(arg1, arg2, arg3)
         // flightSuretyData.fund{value: msg.value}(airline);
         flightSuretyData.fund.value(msg.value)(airline);
-        flightSuretyData.buy(key, msg.value);
+        flightSuretyData.buy(key, calculateInsuranceValue(msg.value));
     }
-
-    // function airlineHasFunds(
-    //     address airline,
-    //     uint256 amount
-    // ) internal view returns (bool) {
-
-    // }
 
     /**
      * @dev Calculate the insurance result based on how much was paid.
      *
      */
-    function getInsuranceValue(uint256 amount) internal pure returns (uint256) {
+    function calculateInsuranceValue(
+        uint256 amount
+    ) internal pure returns (uint256) {
         return amount.mul(3).div(2);
     }
 
@@ -243,13 +239,6 @@ contract FlightSuretyApp {
      *
      */
     function registerFlight() external pure {}
-
-    // Flight data persisted forever
-    // struct FlightStatus {
-    //     bool hasStatus;
-    //     uint8 status;
-    // }
-    // mapping(bytes32 => FlightStatus) flights;
 
     /**
      * @dev Called after oracle has updated flight status
@@ -263,6 +252,58 @@ contract FlightSuretyApp {
     ) internal {
         bytes32 flightKey = getFlightKey(airline, flight, timestamp);
         flights[flightKey] = Flight(true, statusCode, timestamp, airline);
+    }
+
+    function getCreditValue(
+        address passenger,
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    )
+        public
+        view
+        requireIsOperational
+        returns (uint256 flightStatus, uint256 credit)
+    {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        flightStatus = flights[flightKey].statusCode;
+        bytes32 key = getInsuranceKey(passenger, airline, flight, timestamp);
+        credit = flightSuretyData.getCreditValue(key);
+        return (flightStatus, credit);
+    }
+
+    function creditInsuree(
+        address passenger,
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    ) public requireIsOperational {
+        bytes32 flightKey = getFlightKey(airline, flight, timestamp);
+        if (
+            flights[flightKey].isRegistered &&
+            flights[flightKey].statusCode == STATUS_CODE_LATE_AIRLINE
+        ) {
+            bytes32 key = getInsuranceKey(
+                passenger,
+                airline,
+                flight,
+                timestamp
+            );
+            uint256 credit = flightSuretyData.getInsuranceValue(key);
+            flightSuretyData.creditInsurees(key, credit);
+        }
+    }
+
+    function payInsuree(
+        address passenger,
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    ) public requireIsOperational {
+        bytes32 key = getInsuranceKey(passenger, airline, flight, timestamp);
+        uint256 credit = flightSuretyData.getCreditValue(key);
+        require(credit > 0, "No credit available.");
+        flightSuretyData.pay(passenger, key, credit);
     }
 
     // Generate a request for oracles to fetch flight information
@@ -498,4 +539,10 @@ interface FlightSuretyData {
     function fund(address account) external payable;
 
     function getInsuranceValue(bytes32 key) external view returns (uint256);
+
+    function getCreditValue(bytes32 key) external view returns (uint256);
+
+    function creditInsurees(bytes32 key, uint256 value) external;
+
+    function pay(address passenger, bytes32 key, uint256 value) external;
 }

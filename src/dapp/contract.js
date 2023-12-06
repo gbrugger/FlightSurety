@@ -82,8 +82,10 @@ export default class Contract {
       .call({ from: self.owner }, callback);
   }
 
-  fetchFlightStatus(airline, flight, timestamp, callback) {
+  fetchFlightStatus = async (airline, flight, timestamp, callback) => {
     const self = this;
+    const accounts = await self.web3.eth.getAccounts();
+    const account = accounts[0];
     timestamp /= 1000;
     const payload = {
       airline: airline,
@@ -92,14 +94,14 @@ export default class Contract {
     };
     self.flightSuretyApp.methods
       .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
-      .send({ from: self.owner }, (error, result) => {
+      .send({ from: account }, (error, result) => {
         callback(error, payload);
       });
-  }
+  };
 
   registerAirline = async (airlineAddress, airlineName, callback) => {
     const self = this;
-    let accounts = await self.web3.eth.getAccounts();
+    const accounts = await self.web3.eth.getAccounts();
     const registrar = accounts[0];
     const payload = {
       airlineAddress: airlineAddress,
@@ -163,6 +165,71 @@ export default class Contract {
     } catch (e) {
       console.error(e);
       callback(e.message, payload);
+    }
+  };
+
+  creditInsuree = async (airline, flight, timestamp, callback) => {
+    const self = this;
+    let accounts = await self.web3.eth.getAccounts();
+    const passenger = accounts[0];
+    timestamp /= 1000;
+    const payload = {
+      flight: flight,
+    };
+    try {
+      const { error, txHash } = await self.flightSuretyApp.methods
+        .creditInsuree(passenger, airline, flight, timestamp)
+        .send({
+          from: passenger,
+        });
+      callback(error, payload);
+    } catch (e) {
+      console.error(e);
+      callback(e.message, payload);
+    }
+  };
+
+  checkCredit = async (airline, flight, timestamp, callback) => {
+    const self = this;
+    let accounts = await self.web3.eth.getAccounts();
+    const passenger = accounts[0];
+    timestamp /= 1000;
+    const payload = {
+      flight: flight,
+      flightStatus: -1,
+      credit: -1,
+    };
+    try {
+      const { flightStatus, credit } = await self.flightSuretyApp.methods
+        .getCreditValue(passenger, airline, flight, timestamp)
+        .call({
+          from: passenger,
+        });
+      payload.flightStatus = flightStatus;
+      payload.credit = credit;
+      callback(undefined, payload);
+    } catch (e) {
+      callback(e, payload);
+    }
+  };
+
+  pay = async (airline, flight, timestamp, callback) => {
+    const self = this;
+    let accounts = await self.web3.eth.getAccounts();
+    const passenger = accounts[0];
+    timestamp /= 1000;
+    const payload = {
+      flight: flight,
+    };
+    try {
+      const { error, txHash } = await self.flightSuretyApp.methods
+        .payInsuree(passenger, airline, flight, timestamp)
+        .send({
+          from: passenger,
+        });
+      callback(error, payload);
+    } catch (e) {
+      callback(e, payload);
     }
   };
 }

@@ -78,7 +78,6 @@ import "./flightsurety.css";
       const [m, d, y] = ts.split(/-|\//);
       const date = new Date(y, m - 1, d);
       const timestamp = date.getTime();
-      console.log(airline, flight, val, timestamp);
       contract.buyInsurance(
         airline,
         flight,
@@ -94,6 +93,66 @@ import "./flightsurety.css";
           ]);
         }
       );
+    });
+
+    // Request credit
+    DOM.elid("submit-request-credit").addEventListener("click", () => {
+      const airline = DOM.elid("requestCreditOption").value;
+      const sel = DOM.elid("requestCreditOption");
+      var flight = sel.options[sel.selectedIndex].text;
+      const ts = DOM.elid("requestCreditTimestamp").value;
+      const [m, d, y] = ts.split(/-|\//);
+      const date = new Date(y, m - 1, d);
+      const timestamp = date.getTime();
+      contract.creditInsuree(airline, flight, timestamp, (error, payload) => {
+        display("Credit", "Request Credit", [
+          {
+            label: "Result",
+            error: error,
+            value: `Requested credit for flight ${payload.flight}.`,
+          },
+        ]);
+      });
+    });
+
+    // Check credit
+    DOM.elid("check-credit").addEventListener("click", () => {
+      const airline = DOM.elid("requestCreditOption").value;
+      const sel = DOM.elid("requestCreditOption");
+      var flight = sel.options[sel.selectedIndex].text;
+      const ts = DOM.elid("requestCreditTimestamp").value;
+      const [m, d, y] = ts.split(/-|\//);
+      const date = new Date(y, m - 1, d);
+      const timestamp = date.getTime();
+      contract.checkCredit(airline, flight, timestamp, (error, payload) => {
+        display("Credit", "Request Credit", [
+          {
+            label: "Result",
+            error: error,
+            value: `Flight status is ${payload.flightStatus}. Your credit is ${payload.credit}.`,
+          },
+        ]);
+      });
+    });
+
+    // Get Paid
+    DOM.elid("receive-payment").addEventListener("click", () => {
+      const airline = DOM.elid("requestCreditOption").value;
+      const sel = DOM.elid("requestCreditOption");
+      var flight = sel.options[sel.selectedIndex].text;
+      const ts = DOM.elid("requestCreditTimestamp").value;
+      const [m, d, y] = ts.split(/-|\//);
+      const date = new Date(y, m - 1, d);
+      const timestamp = date.getTime();
+      contract.pay(airline, flight, timestamp, (error, payload) => {
+        display("Payment", "Payment Requested", [
+          {
+            label: "Result",
+            error: error,
+            value: `Payment requested. Check your wallet.`,
+          },
+        ]);
+      });
     });
   });
 })();

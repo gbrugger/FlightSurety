@@ -24,16 +24,17 @@ contract FlightSuretyData {
     mapping(address => Airline) private airlines;
     address[] private airlinesRegistered;
 
-    struct Passenger {
-        address wallet;
-        uint256 funding;
-    }
+    // struct Passenger {
+    //     address wallet;
+    //     uint256 funding;
+    // }
 
-    mapping(address => Passenger) private passengers;
+    // mapping(address => Passenger) private passengers;
 
     uint64 private constant MAX_INSURANCE = 1 ether;
 
     mapping(bytes32 => uint256) private insurance;
+    mapping(bytes32 => uint256) private credit;
 
     event FundedAirline(address airline, uint256 funds);
 
@@ -205,20 +206,47 @@ contract FlightSuretyData {
 
     function getInsuranceValue(
         bytes32 key
-    ) public view requireIsOperational returns (uint256) {
+    )
+        public
+        view
+        requireIsOperational
+        requireIsCallerAuthorized
+        returns (uint256)
+    {
         return insurance[key];
     }
 
     /**
-     *  @dev Credits payouts to insurees
+     *  @dev Credits payouts to insurees. Each insuree must request his own credit.
      */
-    function creditInsurees() external pure {}
+    function creditInsurees(
+        bytes32 key,
+        uint256 value
+    ) external requireIsCallerAuthorized requireIsOperational {
+        // uint256 target in mapping defaults to 0
+        insurance[key] = insurance[key].sub(value);
+        credit[key] = credit[key].add(value);
+    }
+
+    function getCreditValue(
+        bytes32 key
+    ) public view requireIsOperational returns (uint256) {
+        return credit[key];
+    }
 
     /**
      *  @dev Transfers eligible payout funds to insuree
      *
      */
-    function pay() external pure {}
+    function pay(
+        address passenger,
+        bytes32 key,
+        uint256 value
+    ) external requireIsCallerAuthorized requireIsOperational {
+        // uint256 target in mapping defaults to 0
+        credit[key] = credit[key].sub(value);
+        address(passenger).transfer(value);
+    }
 
     /**
      * @dev Initial funding for the insurance. Unless there are too many delayed flights
