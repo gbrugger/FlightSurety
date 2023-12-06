@@ -26,13 +26,13 @@ contract FlightSuretyApp {
 
     address private contractOwner; // Account used to deploy contract
 
-    // struct Flight {
-    //     bool isRegistered;
-    //     uint8 statusCode;
-    //     uint256 updatedTimestamp;
-    //     address airline;
-    // }
-    // mapping(bytes32 => Flight) private flights;
+    struct Flight {
+        bool isRegistered;
+        uint8 statusCode;
+        uint256 updatedTimestamp;
+        address airline;
+    }
+    mapping(bytes32 => Flight) private flights;
     FlightSuretyData flightSuretyData;
 
     // keccak256(Voted airline + voter airline) => already voted?
@@ -245,11 +245,11 @@ contract FlightSuretyApp {
     function registerFlight() external pure {}
 
     // Flight data persisted forever
-    struct FlightStatus {
-        bool hasStatus;
-        uint8 status;
-    }
-    mapping(bytes32 => FlightStatus) flights;
+    // struct FlightStatus {
+    //     bool hasStatus;
+    //     uint8 status;
+    // }
+    // mapping(bytes32 => FlightStatus) flights;
 
     /**
      * @dev Called after oracle has updated flight status
@@ -262,7 +262,7 @@ contract FlightSuretyApp {
         uint8 statusCode
     ) internal {
         bytes32 flightKey = getFlightKey(airline, flight, timestamp);
-        flights[flightKey] = FlightStatus(true, statusCode);
+        flights[flightKey] = Flight(true, statusCode, timestamp, airline);
     }
 
     // Generate a request for oracles to fetch flight information
@@ -362,6 +362,8 @@ contract FlightSuretyApp {
         return oracles[msg.sender].indexes;
     }
 
+    mapping(bytes32 => bool) oracleVotes;
+
     // Called by oracle when a response is available to an outstanding request
     // For the response to be accepted, there must be a pending request that is open
     // and matches one of the three Indexes randomly assigned to the oracle at the
@@ -385,10 +387,17 @@ contract FlightSuretyApp {
         );
         require(
             oracleResponses[key].isOpen,
-            "Flight or timestamp does not match oracle request"
+            "Flight or timestamp does not match oracle request or transaction is finished."
         );
-
+        bytes32 vote = keccak256(
+            abi.encodePacked(index, airline, flight, timestamp, msg.sender)
+        );
+        require(
+            !oracleVotes[vote],
+            "Oracle already presented status for this request."
+        );
         oracleResponses[key].responses[statusCode].push(msg.sender);
+        oracleVotes[key] = true;
 
         // Information isn't considered verified until at least MIN_RESPONSES
         // oracles respond with the *** same *** information
@@ -396,6 +405,7 @@ contract FlightSuretyApp {
         if (
             oracleResponses[key].responses[statusCode].length >= MIN_RESPONSES
         ) {
+            oracleResponses[key].isOpen = false;
             emit FlightStatusInfo(airline, flight, timestamp, statusCode);
 
             // Handle flight status as appropriate

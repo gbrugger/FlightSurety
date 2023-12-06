@@ -6,7 +6,7 @@ import express from "express";
 
 (async () => {
   const config = Config["localhost"];
-  const ORACLES_COUNT = 1;
+  const ORACLES_COUNT = 100;
 
   const STATUS_CODE_UNKNOWN = 0;
   const STATUS_CODE_ON_TIME = 10;
@@ -48,6 +48,7 @@ import express from "express";
         await flightSuretyApp.methods.registerOracle().send({
           from: accounts[a],
           value: fee,
+          gas: 20000000,
         });
       } catch (e) {
         console.log(e.message);
@@ -72,6 +73,7 @@ import express from "express";
         const flight = event.returnValues.flight;
         const timestamp = event.returnValues.timestamp;
         const airline = event.returnValues.airline;
+        const STATUS = getRandomStatus();
         for (let idx = 0; idx < 3; idx++) {
           try {
             // Submit a response...it will only be accepted if there is an Index match
@@ -81,13 +83,11 @@ import express from "express";
                 airline,
                 flight,
                 timestamp,
-                STATUS_CODE_LATE_AIRLINE
+                STATUS
               )
-              .send({ from: accounts[a] });
+              .send({ from: accounts[a], gas: 20000000 });
           } catch (e) {
-            // Enable this when debugging
             console.log("\nError", idx, oracleIndexes[idx], flight, timestamp);
-            // console.log(e.message);
           }
         }
       }
@@ -108,5 +108,7 @@ app.get("/api", (req, res) => {
     message: "An API for use with your Dapp!",
   });
 });
-
+const getRandomStatus = () => {
+  return (Math.round(Math.random() * 10) % 6) * 10;
+};
 export default app;
